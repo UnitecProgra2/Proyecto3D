@@ -12,8 +12,9 @@ import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
+import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.Input;
 
 /**
  * See: http://blog.xoppa.com/loading-models-using-libgdx/
@@ -27,6 +28,11 @@ public class MyGdxGame implements ApplicationListener {
 	public Environment environment;
 	public boolean loading;
 	ModelInstance my_model;
+	float rotation_x;
+	float rotation_y;
+	float rotation_z;
+	float velocity = 0.0f;
+	float acceleration = 0.0f;
 
 	@Override
 	public void create () {
@@ -43,11 +49,15 @@ public class MyGdxGame implements ApplicationListener {
 		cam.update();
 
 		camController = new CameraInputController(cam);
-		Gdx.input.setInputProcessor(camController);
+		//Gdx.input.setInputProcessor(camController);
 
 		assets = new AssetManager();
 		assets.load("convertido.g3db", Model.class);
 		loading = true;
+
+		rotation_x = 0;
+		rotation_y = 0;
+		rotation_z = 0;
 	}
 
 	@Override
@@ -58,7 +68,7 @@ public class MyGdxGame implements ApplicationListener {
 			my_model = new ModelInstance(ship);
 			loading = false;
 		}
-		camController.update();
+		//camController.update();
 
 		Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
@@ -67,10 +77,48 @@ public class MyGdxGame implements ApplicationListener {
 		if(my_model!=null)
 		{
 			modelBatch.render(my_model, environment);
-			float current_position = my_model.transform.getTranslation(new Vector3()).y;
-			my_model.transform.setToTranslation(0.0f,current_position+0.1f,0f);
-			if(current_position>10)
-				my_model.transform.setToTranslation(0.0f,0f,0f);
+
+			float current_position_x =
+					my_model.transform.getTranslation(new Vector3()).x;
+			float current_position_y =
+					my_model.transform.getTranslation(new Vector3()).y;
+			float current_position_z =
+					my_model.transform.getTranslation(new Vector3()).z;
+
+			if(Gdx.input.isKeyPressed(Input.Keys.UP))
+			{
+				acceleration=0.01f;
+			}else if(Gdx.input.isKeyPressed(Input.Keys.DOWN))
+			{
+				acceleration=-0.01f;
+			}else
+			{
+				acceleration=0f;
+			}
+
+			velocity+=acceleration;
+
+			float delta_x =
+					(float)Math.sin(Math.toRadians(rotation_z))*velocity;
+			float delta_y =
+					(float)Math.cos(Math.toRadians(rotation_z))*velocity;
+			current_position_x-=delta_x;
+			current_position_y+=delta_y;
+
+			if(Gdx.input.isKeyPressed(Input.Keys.LEFT))
+				rotation_z+=1f;
+			if(Gdx.input.isKeyPressed(Input.Keys.RIGHT))
+				rotation_z-=1f;
+
+			if(rotation_z>360 || rotation_z<0)
+				rotation_z%=360;
+
+			my_model.transform.setToTranslation
+					(current_position_x, current_position_y, current_position_z);
+
+			my_model.transform.rotate(Vector3.X, rotation_x);
+			my_model.transform.rotate(Vector3.Y, rotation_y);
+			my_model.transform.rotate(Vector3.Z, rotation_z);
 		}
 		modelBatch.end();
 	}
